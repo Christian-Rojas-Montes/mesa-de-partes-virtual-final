@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Mesa de Partes Virtual">
+  <rect width="512" height="512" rx="80" fill="#8a0808"/>
+  <rect x="28" y="28" width="456" height="456" rx="64" fill="none" stroke="#d4a017" stroke-width="22"/>
+  <path d="M147 99h157l75 75v240H147z" fill="#fff"/>
+  <path d="M304 99v75h75" fill="#d9e1e8"/>
+  <path d="M192 235h144M192 288h144M192 341h96" stroke="#1f3a5f" stroke-width="21" stroke-linecap="round"/>
+  <circle cx="365" cy="376" r="72" fill="#d4a017"/>
+  <text x="365" y="394" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#650606">PPD</text>
+</svg>

@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": [
-      "php artisan migrate --force"
+      "php artisan migrate --force && if [ \"$RUN_DATABASE_SEEDERS\" = \"true\" ]; then php artisan db:seed --force; fi"
     ],
     "startCommand": "/start-container.sh",
     "healthcheckPath": "/up",

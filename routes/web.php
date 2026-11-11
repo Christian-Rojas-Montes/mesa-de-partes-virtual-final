@@ -31,6 +31,7 @@ use App\Http\Controllers\ProcedureCommunicationController;
 use App\Http\Controllers\ProcedureHistoryController;
 use App\Http\Controllers\ProcedureRequestSearchController;
 use App\Http\Controllers\ProfessionalExamController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicProcedureCatalogController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TitleFinalDossierController;
@@ -69,6 +70,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/cerrar-sesion', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/panel', [DashboardController::class, 'redirect'])->name('dashboard');
+    Route::get('/perfil', [ProfileController::class, 'show'])->name('profile.show');
+    Route::patch('/perfil', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/perfil/contrasena', [ProfileController::class, 'updatePassword'])
+        ->middleware('throttle:5,1')
+        ->name('profile.password.update');
     Route::get('/notificaciones', [NotificationController::class, 'index'])->name('notifications.index');
     Route::patch('/notificaciones/leer-todas', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::patch('/notificaciones/{notification}/leer', [NotificationController::class, 'markRead'])->name('notifications.read');

@@ -8,4 +8,8 @@
 6. Desde el panel consulte estado, línea de tiempo, observaciones, faltantes, citas, originales pendientes y documento listo.
 7. Responda observaciones dentro del plazo y marque notificaciones como leídas.
 
+## Mi perfil (todos los roles)
+
+Desde **Mi perfil** puede consultar los datos de su cuenta y actualizar el teléfono de contacto o la contraseña. El correo, documento, rol y área son de solo lectura; el documento se muestra parcialmente oculto. Para cambiar la contraseña, ingrese la actual y confirme una nueva. El sistema cerrará las demás sesiones.
+
 Para trámites híbridos o presenciales, la declaración del usuario no equivale a recepción: Mesa de Partes debe confirmarla. No comparta su cuenta ni cargue documentos de otras personas.

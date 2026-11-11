@@ -339,6 +339,19 @@ a.btn, button, summary, [role="button"] { touch-action: manipulation; }
     border-top: 4px solid var(--institutional-blue) !important;
 }
 
+.profile-identity-mark {
+    display: grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    flex: 0 0 auto;
+    color: var(--institutional-primary);
+    font-weight: 800;
+    place-items: center;
+    background: #fbeaea;
+    border: 1px solid #e8caca;
+    border-radius: 50%;
+}
+
 .user-detail-list dt,
 .user-detail-list dd {
     padding-top: 0.65rem;

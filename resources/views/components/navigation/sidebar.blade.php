@@ -46,6 +46,9 @@
         <a class="sidebar-link {{ request()->routeIs('dashboard.*') ? 'active' : '' }}" href="{{ route('dashboard') }}" @if(request()->routeIs('dashboard.*')) aria-current="page" @endif>
             <span aria-hidden="true">⌂</span><span>Inicio del panel</span>
         </a>
+        <a class="sidebar-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.show') }}" @if(request()->routeIs('profile.*')) aria-current="page" @endif>
+            <span aria-hidden="true">●</span><span>Mi perfil</span>
+        </a>
 
         <p class="sidebar-section-title">Consulta</p>
         <a class="sidebar-link {{ request()->routeIs('search.*') ? 'active' : '' }}" href="{{ route('search.index') }}"><span aria-hidden="true">›</span><span>Búsqueda</span></a>

@@ -23,7 +23,7 @@
     <section aria-labelledby="options-title">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
             <h2 id="options-title" class="h4 mb-0">Opciones del rol</h2>
-            <span class="text-secondary small">Las opciones no disponibles se habilitarán en fases posteriores.</span>
+            <span class="text-secondary small">Accede a las herramientas disponibles para tu rol.</span>
         </div>
         <div class="row g-4">
             @foreach ($options as $option)

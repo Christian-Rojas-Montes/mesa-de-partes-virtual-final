@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Area;
 use App\Models\AuditLog;
 use App\Models\ProcedureRequest;
+use App\Models\ProcedureType;
 use App\Models\RequestDerivation;
 use App\Models\Status;
 use App\Models\User;
@@ -19,7 +20,24 @@ class RequestDerivationService
     {
         return DB::transaction(function () use ($procedureRequest, $area, $actor, $reason) {
             $locked = ProcedureRequest::query()->lockForUpdate()->findOrFail($procedureRequest->id);
-            $destination = Area::query()->lockForUpdate()->findOrFail($area->id);
+            $procedureType = ProcedureType::query()->lockForUpdate()->findOrFail($locked->procedure_type_id);
+            $areaIds = collect([$area->id, $procedureType->responsible_area_id])
+                ->filter()
+                ->unique()
+                ->sortBy(fn ($id) => (int) $id)
+                ->values();
+            $lockedAreas = Area::query()
+                ->whereKey($areaIds->all())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+            $destination = $lockedAreas->get($area->id);
+
+            if ($destination === null) {
+                abort(404);
+            }
+
             $statusCode = $locked->status()->value('code');
             $latest = $locked->derivations()->lockForUpdate()->latest('derived_at')->latest('id')->first();
 
@@ -27,11 +45,27 @@ class RequestDerivationService
                 $this->invalid('area_id', 'El área seleccionada no está activa.');
             }
 
+            if ($procedureType->responsible_area_id !== null) {
+                $configuredArea = $lockedAreas->get($procedureType->responsible_area_id);
+
+                if ($configuredArea === null || ! $configuredArea->active) {
+                    $this->invalid('area_id', 'El área responsable configurada para este trámite no está disponible. Solicita que se actualice el catálogo.');
+                }
+
+                if ($destination->id !== $configuredArea->id) {
+                    $this->invalid('area_id', 'Este trámite debe derivarse al área responsable configurada: '.$configuredArea->name.'.');
+                }
+            }
+
             $isInitial = $statusCode === 'EN_REVISION' && $locked->validated_at !== null && $latest === null;
             $isCorrection = $statusCode === 'DERIVADO' && $latest !== null;
 
             if (! $isInitial && ! $isCorrection) {
                 $this->invalid('action', 'Solo se pueden derivar expedientes validados o corregir una derivación vigente.');
+            }
+
+            if ($isCorrection && $latest->received_at !== null) {
+                $this->invalid('action', 'No se puede corregir la derivación porque el área destinataria ya registró la recepción.');
             }
 
             if ($latest?->to_area_id === $destination->id) {
@@ -71,6 +105,7 @@ class RequestDerivationService
                 (string) $derivation->id,
                 $destination->id,
                 'Se asignó el expediente '.$locked->tracking_code.' a tu área.',
+                previousAreaId: $latest?->to_area_id,
             );
 
             return $derivation->load(['originArea', 'destinationArea', 'responsible']);
@@ -90,6 +125,10 @@ class RequestDerivationService
 
             if ($actor->area_id === null || $lockedDerivation->to_area_id !== $actor->area_id) {
                 abort(403);
+            }
+
+            if ($locked->status()->value('code') !== 'DERIVADO') {
+                $this->invalid('action', 'Solo puede recibirse un expediente que se encuentre en estado Derivado.');
             }
 
             if ($lockedDerivation->received_at !== null) {

@@ -32,7 +32,12 @@
                 <td>{{ $item->procedureType->name }}<small class="d-block text-secondary">{{ $item->subject }}</small></td>
                 <td><span class="badge text-bg-primary">{{ $item->status->name }}</span></td>
                 <td>{{ $item->latestDerivation?->destinationArea?->name ?? 'Sin derivación previa' }}</td>
-                <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('front-desk.derivations.create', $item) }}">{{ $item->latestDerivation ? 'Corregir derivación' : 'Derivar' }}</a></td>
+                <td class="text-end">
+                    @php($alreadyAtConfiguredArea = $item->latestDerivation && $item->procedureType->responsible_area_id === $item->latestDerivation->to_area_id)
+                    <a class="btn btn-sm btn-outline-primary" href="{{ route('front-desk.derivations.create', $item) }}">
+                        {{ $alreadyAtConfiguredArea ? 'Ver destino' : ($item->latestDerivation ? 'Corregir derivación' : 'Derivar') }}
+                    </a>
+                </td>
             </tr>@empty<tr><td colspan="5" class="text-center text-secondary py-5">No hay expedientes con los filtros indicados.</td></tr>@endforelse</tbody>
         </table>
     </div>@if($procedureRequests->hasPages())<div class="card-footer bg-white">{{ $procedureRequests->links() }}</div>@endif</div>

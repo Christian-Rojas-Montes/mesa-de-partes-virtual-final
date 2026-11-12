@@ -55,15 +55,16 @@ class InternalNotificationService
         ?int $areaId = null,
         ?string $areaMessage = null,
         array $structuredData = [],
+        ?int $previousAreaId = null,
     ): void {
         $recipients = match ($event) {
             self::CORRECTION_SUBMITTED,
             self::RESPONSE_REGISTERED => $this->applicantAndRole($procedureRequest, 'Mesa de Partes'),
-            self::DERIVED => $this->derivedRecipients($procedureRequest, $areaId),
+            self::DERIVED => $this->derivedRecipients($procedureRequest, $areaId, $previousAreaId),
             default => collect([$procedureRequest->user]),
         };
 
-        $recipients->unique('id')->each(function (User $recipient) use ($procedureRequest, $event, $message, $occurrenceKey, $areaMessage, $structuredData) {
+        $recipients->unique('id')->each(function (User $recipient) use ($procedureRequest, $event, $message, $occurrenceKey, $areaMessage, $structuredData, $areaId, $previousAreaId) {
             $deduplicationKey = $event.':'.$procedureRequest->id.':'.$occurrenceKey.':'.$recipient->id;
 
             if ($recipient->notifications()->where('data->deduplication_key', $deduplicationKey)->exists()) {
@@ -72,6 +73,7 @@ class InternalNotificationService
 
             $recipientMessage = match (true) {
                 $recipient->id === $procedureRequest->user_id => $message,
+                $event === self::DERIVED && $previousAreaId !== null && $previousAreaId !== $areaId && $recipient->area_id === $previousAreaId => 'El expediente '.$procedureRequest->tracking_code.' fue reasignado a otra área y ya no está bajo responsabilidad de su área.',
                 $event === self::DERIVED => $areaMessage ?? $message,
                 $event === self::CORRECTION_SUBMITTED => 'El solicitante presentó una subsanación para el expediente '.$procedureRequest->tracking_code.'.',
                 $event === self::RESPONSE_REGISTERED => 'El expediente '.$procedureRequest->tracking_code.' tiene una respuesta y está listo para revisión de cierre.',
@@ -98,10 +100,14 @@ class InternalNotificationService
     }
 
     /** @return Collection<int, User> */
-    private function derivedRecipients(ProcedureRequest $procedureRequest, ?int $areaId): Collection
+    private function derivedRecipients(ProcedureRequest $procedureRequest, ?int $areaId, ?int $previousAreaId): Collection
     {
         return collect([$procedureRequest->user])->merge(
             $areaId === null ? collect() : $this->activeUsersByRole('Responsable de área', $areaId),
+        )->merge(
+            $previousAreaId === null || $previousAreaId === $areaId
+                ? collect()
+                : $this->activeUsersByRole('Responsable de área', $previousAreaId),
         );
     }
 

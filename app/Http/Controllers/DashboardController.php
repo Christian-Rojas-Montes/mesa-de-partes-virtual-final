@@ -25,7 +25,7 @@ class DashboardController extends Controller
 
     public function frontDesk(): View
     {
-        return $this->dashboard('Panel de Mesa de Partes', 'Espacio de trabajo para la futura revisión y derivación documentaria.', [
+        return $this->dashboard('Panel de Mesa de Partes', 'Revisa expedientes, registra su validación, deriva al área responsable y verifica las respuestas.', [
             ['title' => 'Registrar expediente presencial', 'description' => 'Vincular al ciudadano, registrar documentos físicos y emitir constancia.', 'route' => 'front-desk.physical-registration.create'],
             ['title' => 'Solicitudes recibidas', 'description' => 'Revisar expedientes pendientes de validación.', 'route' => 'front-desk.reviews.index'],
             ['title' => 'Observaciones', 'description' => 'Gestionar observaciones desde la bandeja de revisión.', 'route' => 'front-desk.reviews.index'],
@@ -36,7 +36,7 @@ class DashboardController extends Controller
 
     public function areaManager(): View
     {
-        return $this->dashboard('Panel del responsable de área', 'Espacio de trabajo para la futura atención de expedientes derivados.', [
+        return $this->dashboard('Panel del responsable de área', 'Recibe los expedientes derivados a tu área, registra avances y emite la respuesta final.', [
             ['title' => 'Expedientes asignados', 'description' => 'Consultar los trámites derivados al área.', 'route' => 'area-manager.assignments.index'],
             ['title' => 'Registrar atención', 'description' => 'Actualizar el avance de un expediente.', 'route' => 'area-manager.assignments.index'],
             ['title' => 'Emitir respuesta', 'description' => 'Registrar el resultado final del trámite.', 'route' => 'area-manager.assignments.index'],

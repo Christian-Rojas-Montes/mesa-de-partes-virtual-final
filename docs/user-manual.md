@@ -13,3 +13,9 @@
 Desde **Mi perfil** puede consultar los datos de su cuenta y actualizar el teléfono de contacto o la contraseña. El correo, documento, rol y área son de solo lectura; el documento se muestra parcialmente oculto. Para cambiar la contraseña, ingrese la actual y confirme una nueva. El sistema cerrará las demás sesiones.
 
 Para trámites híbridos o presenciales, la declaración del usuario no equivale a recepción: Mesa de Partes debe confirmarla. No comparta su cuenta ni cargue documentos de otras personas.
+
+## Derivaciones (Mesa de Partes y responsables de área)
+
+Después de validar un expediente, Mesa de Partes abre **Derivaciones**, busca el expediente y selecciona su destino. Si el tipo de trámite tiene un área responsable activa configurada, el sistema usa ese destino y no permite cambiarlo; si no tiene un área configurada, Mesa de Partes puede elegir un área activa. Agregue un motivo cuando ayude a explicar el envío. El historial conserva cada derivación y corrección.
+
+Una corrección solo puede hacerse mientras el área destinataria no haya registrado la recepción. Al corregir, el solicitante recibe el nuevo destino y las personas responsables de las áreas anterior y nueva reciben el aviso correspondiente. Una vez recibida la derivación, el área responsable registra el inicio, los avances y la respuesta final; Mesa de Partes verifica esa respuesta y cierra el expediente.

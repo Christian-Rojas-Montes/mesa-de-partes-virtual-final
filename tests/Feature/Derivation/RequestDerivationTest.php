@@ -61,6 +61,48 @@ class RequestDerivationTest extends TestCase
         $this->assertSame('DERIVADO', $request->fresh()->status->code);
     }
 
+    public function test_configured_responsible_area_is_preselected_and_enforced(): void
+    {
+        $frontDesk = $this->userWithRole('Mesa de Partes');
+        $applicant = $this->userWithRole('Solicitante');
+        $configuredArea = Area::factory()->create(['name' => 'Área responsable ficticia', 'active' => true]);
+        $otherArea = Area::factory()->create(['active' => true]);
+        $type = ProcedureType::factory()->create(['responsible_area_id' => $configuredArea->id]);
+        $request = $this->validatedRequest($applicant, $frontDesk);
+        $request->update(['procedure_type_id' => $type->id]);
+
+        $this->actingAs($frontDesk)->get(route('front-desk.derivations.create', $request))
+            ->assertOk()
+            ->assertSee('El destino se define en el catálogo de este trámite.')
+            ->assertSee('value="'.$configuredArea->id.'"', false)
+            ->assertDontSee('value="'.$otherArea->id.'"', false);
+
+        $this->post(route('front-desk.derivations.store', $request), ['area_id' => $otherArea->id])
+            ->assertSessionHasErrors('area_id');
+        $this->assertDatabaseCount('request_derivations', 0);
+
+        $this->post(route('front-desk.derivations.store', $request), ['area_id' => $configuredArea->id])
+            ->assertSessionHas('status');
+        $this->assertDatabaseHas('request_derivations', [
+            'procedure_request_id' => $request->id,
+            'to_area_id' => $configuredArea->id,
+        ]);
+
+        $inactiveArea = Area::factory()->create(['active' => false]);
+        $inactiveType = ProcedureType::factory()->create(['responsible_area_id' => $inactiveArea->id]);
+        $blockedRequest = $this->validatedRequest($applicant, $frontDesk);
+        $blockedRequest->update(['procedure_type_id' => $inactiveType->id]);
+
+        $this->get(route('front-desk.derivations.create', $blockedRequest))
+            ->assertOk()
+            ->assertSee('está inactiva');
+        $this->post(route('front-desk.derivations.store', $blockedRequest), ['area_id' => $otherArea->id])
+            ->assertSessionHasErrors('area_id');
+        $this->assertDatabaseMissing('request_derivations', [
+            'procedure_request_id' => $blockedRequest->id,
+        ]);
+    }
+
     public function test_derivation_records_history_audit_and_notifications_for_applicant_and_destination_area(): void
     {
         $frontDesk = $this->userWithRole('Mesa de Partes');
@@ -96,6 +138,9 @@ class RequestDerivationTest extends TestCase
         $applicant = $this->userWithRole('Solicitante');
         $firstArea = Area::factory()->create(['active' => true]);
         $secondArea = Area::factory()->create(['active' => true]);
+        $thirdArea = Area::factory()->create(['active' => true]);
+        $firstManager = $this->userWithRole('Responsable de área', $firstArea);
+        $secondManager = $this->userWithRole('Responsable de área', $secondArea);
         $request = $this->validatedRequest($applicant, $frontDesk);
 
         $this->actingAs($frontDesk)->post(route('front-desk.derivations.store', $request), ['area_id' => $firstArea->id]);
@@ -119,6 +164,19 @@ class RequestDerivationTest extends TestCase
             'reason' => 'Corrección de destino ficticia.',
         ]);
         $this->assertDatabaseHas('request_histories', ['procedure_request_id' => $request->id, 'action' => 'rederived']);
+        $this->assertTrue($firstManager->notifications()->get()->contains(
+            fn ($notification) => str_contains($notification->data['message'], 'fue reasignado a otra área'),
+        ));
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $secondManager->id]);
+
+        RequestDerivation::query()->where('procedure_request_id', $request->id)->latest('id')->firstOrFail()
+            ->update(['received_at' => now()]);
+        $this->get(route('front-desk.derivations.create', $request))
+            ->assertOk()
+            ->assertSee('Desde ese momento ya no se puede corregir el destino.');
+        $this->post(route('front-desk.derivations.store', $request), ['area_id' => $thirdArea->id])
+            ->assertSessionHasErrors('action');
+        $this->assertDatabaseCount('request_derivations', 2);
     }
 
     public function test_permissions_are_enforced_for_derivation_and_area_assignments(): void
@@ -161,6 +219,21 @@ class RequestDerivationTest extends TestCase
             ->assertDontSee($outside->tracking_code);
     }
 
+    public function test_derivation_queue_excludes_requests_already_received_by_the_destination_area(): void
+    {
+        $frontDesk = $this->userWithRole('Mesa de Partes');
+        $applicant = $this->userWithRole('Solicitante');
+        $area = Area::factory()->create();
+        $pending = $this->derivedRequest($applicant, $frontDesk, $area, code: 'MPV-2026-009981');
+        $received = $this->derivedRequest($applicant, $frontDesk, $area, code: 'MPV-2026-009982');
+        $received->latestDerivation->update(['received_at' => now()]);
+
+        $this->actingAs($frontDesk)->get(route('front-desk.derivations.index'))
+            ->assertOk()
+            ->assertSee($pending->tracking_code)
+            ->assertDontSee($received->tracking_code);
+    }
+
     public function test_current_area_can_register_receipt_only_once_with_traceability(): void
     {
         $frontDesk = $this->userWithRole('Mesa de Partes');
@@ -185,6 +258,16 @@ class RequestDerivationTest extends TestCase
         $this->patch(route('area-manager.assignments.receive', [$request, $derivation]))
             ->assertSessionHasErrors('action');
         $this->assertSame($historyCount, $request->histories()->count());
+
+        $notDerived = $this->procedureRequest($applicant, 'EN_REVISION');
+        $notDerivedDerivation = $notDerived->derivations()->create([
+            'to_area_id' => $area->id,
+            'user_id' => $frontDesk->id,
+            'derived_at' => now(),
+        ]);
+        $this->patch(route('area-manager.assignments.receive', [$notDerived, $notDerivedDerivation]))
+            ->assertSessionHasErrors('action');
+        $this->assertNull($notDerivedDerivation->fresh()->received_at);
     }
 
     private function userWithRole(string $roleName, ?Area $area = null): User

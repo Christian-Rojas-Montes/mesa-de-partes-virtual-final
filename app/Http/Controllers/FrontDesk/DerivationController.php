@@ -24,7 +24,10 @@ class DerivationController extends Controller
                 $query->where(function ($query) {
                     $query->whereNotNull('validated_at')
                         ->whereHas('status', fn ($query) => $query->where('code', 'EN_REVISION'));
-                })->orWhereHas('status', fn ($query) => $query->where('code', 'DERIVADO'));
+                })->orWhere(function ($query) {
+                    $query->whereHas('status', fn ($query) => $query->where('code', 'DERIVADO'))
+                        ->whereHas('latestDerivation', fn ($query) => $query->whereNull('received_at'));
+                });
             })
             ->when($filters['codigo'] ?? null, fn ($query, $code) => $query->where('tracking_code', 'like', "%{$code}%"))
             ->when($filters['tramite'] ?? null, fn ($query, $type) => $query->where('procedure_type_id', $type))
@@ -43,13 +46,25 @@ class DerivationController extends Controller
     {
         Gate::authorize('derive', $procedureRequest);
         $procedureRequest->load([
-            'procedureType', 'status', 'user',
+            'procedureType.responsibleArea', 'status', 'user', 'latestDerivation.destinationArea',
             'derivations' => fn ($query) => $query->with(['originArea', 'destinationArea', 'responsible'])->oldest('derived_at'),
         ]);
+        $configuredArea = $procedureRequest->procedureType->responsibleArea;
+        $latestDerivation = $procedureRequest->latestDerivation;
+        $configuredAreaUnavailable = $configuredArea !== null && ! $configuredArea->active;
+        $alreadyAtConfiguredArea = $configuredArea?->active
+            && $latestDerivation?->to_area_id === $configuredArea->id;
+        $correctionBlockedByReceipt = $latestDerivation?->received_at !== null;
 
         return view('front-desk.derivations.create', [
             'procedureRequest' => $procedureRequest,
-            'areas' => Area::active()->orderBy('name')->get(),
+            'areas' => $configuredArea?->active
+                ? collect([$configuredArea])
+                : Area::active()->orderBy('name')->get(),
+            'configuredArea' => $configuredArea,
+            'configuredAreaUnavailable' => $configuredAreaUnavailable,
+            'alreadyAtConfiguredArea' => $alreadyAtConfiguredArea,
+            'correctionBlockedByReceipt' => $correctionBlockedByReceipt,
         ]);
     }
 

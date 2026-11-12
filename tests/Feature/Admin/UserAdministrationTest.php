@@ -171,6 +171,12 @@ class UserAdministrationTest extends TestCase
         $managerRole = $this->role('Responsable de área');
         $area = Area::factory()->create();
         $user = User::factory()->for($this->role('Mesa de Partes'))->create();
+        $passwordBefore = $user->password;
+
+        $this->actingAs($administrator)->get(route('admin.users.edit', $user))
+            ->assertOk()
+            ->assertSee('Nueva contraseña')
+            ->assertSee('Déjala vacía para conservar la contraseña actual.');
 
         $this->actingAs($administrator)->put(route('admin.users.update', $user), [
             ...$this->dataFromUser($user, $managerRole),
@@ -192,11 +198,72 @@ class UserAdministrationTest extends TestCase
         $this->assertSame($managerRole->id, $user->role_id);
         $this->assertSame($area->id, $user->area_id);
         $this->assertSame('NombreActualizado', $user->first_name);
+        $this->assertSame($passwordBefore, $user->password);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'updated',
             'auditable_type' => User::class,
             'auditable_id' => $user->id,
         ]);
+    }
+
+    public function test_administrator_can_set_an_existing_users_password_and_invalidate_their_sessions(): void
+    {
+        $administrator = $this->userWithRole('Administrador');
+        $user = User::factory()->for($this->role('Responsable de área'))->create([
+            'area_id' => Area::factory()->create()->id,
+            'password' => 'ClaveAnterior9!',
+        ]);
+        $oldRememberToken = $user->remember_token;
+        $otherSessionId = Str::random(40);
+
+        DB::table('sessions')->insert([
+            'id' => $otherSessionId,
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'Prueba automatizada',
+            'payload' => 'datos-ficticios',
+            'last_activity' => now()->timestamp,
+        ]);
+
+        $this->actingAs($administrator)->put(route('admin.users.update', $user), [
+            ...$this->dataFromUser($user, $user->role),
+            'password' => 'ClaveNueva9!',
+            'password_confirmation' => 'ClaveNueva9!',
+        ])->assertRedirect(route('admin.users.show', $user));
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('ClaveNueva9!', $user->password));
+        $this->assertNotSame($oldRememberToken, $user->remember_token);
+        $this->assertDatabaseMissing('sessions', ['id' => $otherSessionId]);
+        $this->assertDatabaseMissing('audit_logs', [
+            'auditable_id' => $user->id,
+            'details->changes->password' => 'ClaveNueva9!',
+        ]);
+        $this->actingAs($administrator)->get(route('admin.users.show', $user))
+            ->assertOk()
+            ->assertDontSee('ClaveNueva9!');
+    }
+
+    public function test_administrator_password_update_rejects_weak_or_unconfirmed_passwords(): void
+    {
+        $administrator = $this->userWithRole('Administrador');
+        $user = User::factory()->for($this->role('Mesa de Partes'))->create();
+        $passwordBefore = $user->password;
+        $data = $this->dataFromUser($user, $user->role);
+
+        $this->actingAs($administrator)->put(route('admin.users.update', $user), [
+            ...$data,
+            'password' => 'debil',
+            'password_confirmation' => 'debil',
+        ])->assertSessionHasErrors('password');
+        $this->assertSame($passwordBefore, $user->fresh()->password);
+
+        $this->put(route('admin.users.update', $user), [
+            ...$data,
+            'password' => 'ClaveNueva9!',
+            'password_confirmation' => 'OtraClave9!',
+        ])->assertSessionHasErrors('password');
+        $this->assertSame($passwordBefore, $user->fresh()->password);
     }
 
     public function test_administrator_can_deactivate_another_user_and_sessions_are_invalidated(): void

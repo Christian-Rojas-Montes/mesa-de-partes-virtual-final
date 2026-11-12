@@ -45,6 +45,18 @@
             <input class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" required>
             @error('password_confirmation') <div class="invalid-feedback">{{ $message }}</div> @enderror
         </div>
+    @else
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="password">Nueva contraseña <span class="text-secondary">(opcional)</span></label>
+            <input class="form-control @error('password') is-invalid @enderror" id="password" name="password" type="password" autocomplete="new-password" minlength="8">
+            <div class="form-text">Déjala vacía para conservar la contraseña actual. Si la cambias, usa mayúsculas, minúsculas, números y símbolos.</div>
+            @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="password_confirmation">Confirmar nueva contraseña</label>
+            <input class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="8">
+            @error('password_confirmation') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
     @endif
     <div class="col-md-6 mb-3">
         <label class="form-label" for="role_id">Rol</label>
@@ -70,7 +82,7 @@
 </div>
 
 <div class="alert alert-light border" role="note">
-    <strong>Acceso seguro:</strong> la contraseña se guardará protegida y nunca se mostrará después de crear la cuenta. El usuario puede cambiarla desde <strong>Mi perfil</strong>.
+    <strong>Acceso seguro:</strong> la contraseña se guarda protegida y nunca se muestra. Si la actualizas, se cerrarán las otras sesiones de esa cuenta.
 </div>
 <div class="d-flex flex-wrap gap-2">
     <button class="btn btn-primary" type="submit">{{ $submitLabel }}</button>

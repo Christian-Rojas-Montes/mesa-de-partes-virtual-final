@@ -82,9 +82,12 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
-    {
-        $user->update($request->validated());
+    public function update(
+        UpdateUserRequest $request,
+        User $user,
+        UserAdministrationService $service,
+    ): RedirectResponse {
+        $service->updateInternalUser($user, $request->validated());
 
         return to_route('admin.users.show', $user)->with('status', 'Los datos del usuario fueron actualizados.');
     }

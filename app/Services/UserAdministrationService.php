@@ -19,6 +19,36 @@ class UserAdministrationService
         ]));
     }
 
+    /** @param array<string, mixed> $attributes */
+    public function updateInternalUser(User $user, array $attributes): User
+    {
+        return DB::transaction(function () use ($user, $attributes): User {
+            $account = User::query()->lockForUpdate()->findOrFail($user->id);
+            $password = $attributes['password'] ?? null;
+            unset($attributes['password']);
+
+            $account->fill($attributes);
+
+            if (filled($password)) {
+                $account->forceFill([
+                    'password' => $password,
+                    'remember_token' => Str::random(60),
+                ]);
+            }
+
+            $account->save();
+
+            if (filled($password)) {
+                DB::table('sessions')
+                    ->where('user_id', $account->id)
+                    ->where('id', '!=', session()->getId())
+                    ->delete();
+            }
+
+            return $account;
+        });
+    }
+
     public function toggleActive(User $user): void
     {
         DB::transaction(function () use ($user) {

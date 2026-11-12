@@ -10,6 +10,7 @@
 - Descargas sensibles autorizadas, auditadas y con cabeceras `no-store`/`noindex` y nombre seguro.
 - Exportaciones filtradas por permisos, con datos personales minimizados y auditoría.
 - Correos y notificaciones sin adjuntos ni contenido sensible innecesario.
+- Administración define el correo y la contraseña inicial de las cuentas internas; la contraseña se almacena con hash y puede cambiarse desde el perfil. El restablecimiento posterior usa un enlace temporal enviado al correo.
 - Cambio de contraseña validado con la contraseña actual; al actualizarla se cierran otras sesiones. La auditoría no registra contraseñas ni valores de teléfono.
 - PWA limitada a recursos estáticos públicos; no cachea paneles, expedientes, documentos o APIs privadas.
 

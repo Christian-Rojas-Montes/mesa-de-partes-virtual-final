@@ -33,6 +33,19 @@
         <input class="form-control @error('phone') is-invalid @enderror" id="phone" name="phone" value="{{ old('phone', $user?->phone) }}" maxlength="30">
         @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
+    @if (!$user)
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="password">Contraseña inicial</label>
+            <input class="form-control @error('password') is-invalid @enderror" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            <div class="form-text">Mínimo 8 caracteres, con mayúsculas, minúsculas, números y símbolos. Compártela de forma segura.</div>
+            @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="password_confirmation">Confirmar contraseña inicial</label>
+            <input class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" required>
+            @error('password_confirmation') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        </div>
+    @endif
     <div class="col-md-6 mb-3">
         <label class="form-label" for="role_id">Rol</label>
         <select class="form-select @error('role_id') is-invalid @enderror" id="role_id" name="role_id" required>
@@ -57,7 +70,7 @@
 </div>
 
 <div class="alert alert-light border" role="note">
-    <strong>Acceso seguro:</strong> no se mostrará ninguna contraseña. El acceso se establecerá mediante un enlace temporal enviado al correo registrado.
+    <strong>Acceso seguro:</strong> la contraseña se guardará protegida y nunca se mostrará después de crear la cuenta. El usuario puede cambiarla desde <strong>Mi perfil</strong>.
 </div>
 <div class="d-flex flex-wrap gap-2">
     <button class="btn btn-primary" type="submit">{{ $submitLabel }}</button>

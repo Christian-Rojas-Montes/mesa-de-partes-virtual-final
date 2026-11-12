@@ -15,7 +15,6 @@ class UserAdministrationService
     {
         return DB::transaction(fn () => User::query()->create([
             ...$attributes,
-            'password' => Str::random(64),
             'active' => true,
         ]));
     }

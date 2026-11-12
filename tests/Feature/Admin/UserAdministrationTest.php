@@ -10,6 +10,7 @@ use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -63,12 +64,13 @@ class UserAdministrationTest extends TestCase
             ->assertSee('Restablecimiento de acceso');
     }
 
-    public function test_administrator_creates_internal_user_without_exposing_a_password(): void
+    public function test_administrator_creates_internal_user_with_a_confirmed_password_without_emailing_credentials(): void
     {
         Notification::fake();
         $administrator = $this->userWithRole('Administrador');
         $role = $this->role('Mesa de Partes');
 
+        $password = 'ClaveInicial9!';
         $response = $this->actingAs($administrator)->post(route('admin.users.store'), [
             'role_id' => $role->id,
             'area_id' => '',
@@ -78,26 +80,31 @@ class UserAdministrationTest extends TestCase
             'last_name' => 'Ficticio',
             'email' => 'interno.creado@example.test',
             'phone' => '',
+            'password' => $password,
+            'password_confirmation' => $password,
         ]);
 
         $user = User::where('email', 'interno.creado@example.test')->firstOrFail();
-        $response->assertRedirect(route('admin.users.show', $user));
-        $this->assertNotSame('', $user->password);
-        $this->assertStringNotContainsString('INT-FICTICIO-01', $user->password);
-        Notification::assertSentTo($user, ResetPasswordNotification::class);
+        $response->assertRedirect(route('admin.users.show', $user))
+            ->assertSessionHas('status');
+        $this->assertTrue(Hash::check($password, $user->password));
+        $this->get(route('admin.users.show', $user))
+            ->assertOk()
+            ->assertDontSee($password);
+        Notification::assertNothingSent();
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $administrator->id,
             'action' => 'created',
             'auditable_type' => User::class,
             'auditable_id' => $user->id,
         ]);
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'access_reset_requested',
-            'auditable_type' => User::class,
-            'auditable_id' => $user->id,
-        ]);
         $changes = AuditLog::where('action', 'created')->whereMorphedTo('auditable', $user)->firstOrFail()->details['changes'];
         $this->assertArrayNotHasKey('password', $changes);
+        $this->assertStringNotContainsString($password, json_encode($changes));
+        $this->actingAs($administrator)->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('Contraseña inicial')
+            ->assertSee('Confirmar contraseña inicial');
     }
 
     public function test_internal_creation_rejects_applicant_role_and_responsible_without_area(): void
@@ -116,6 +123,32 @@ class UserAdministrationTest extends TestCase
             'email' => 'responsable.sin.area@example.test',
             'area_id' => null,
         ])->assertSessionHasErrors('area_id');
+    }
+
+    public function test_internal_user_creation_requires_a_strong_confirmed_password(): void
+    {
+        $administrator = $this->userWithRole('Administrador');
+        $role = $this->role('Responsable de área');
+        $area = Area::factory()->create();
+        $data = [
+            ...$this->validUserData($role),
+            'area_id' => $area->id,
+            'email' => 'responsable.ficticio@example.test',
+        ];
+
+        $this->actingAs($administrator)->post(route('admin.users.store'), [
+            ...$data,
+            'password' => 'debil',
+            'password_confirmation' => 'debil',
+        ])->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', ['email' => $data['email']]);
+
+        $this->post(route('admin.users.store'), [
+            ...$data,
+            'password' => 'ClaveInicial9!',
+            'password_confirmation' => 'OtraClave9!',
+        ])->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', ['email' => $data['email']]);
     }
 
     public function test_document_and_email_must_be_unique(): void

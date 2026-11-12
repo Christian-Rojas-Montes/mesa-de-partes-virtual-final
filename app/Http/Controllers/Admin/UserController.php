@@ -66,15 +66,9 @@ class UserController extends Controller
     public function store(StoreUserRequest $request, UserAdministrationService $service): RedirectResponse
     {
         $user = $service->createInternalUser($request->validated());
-        $status = $service->sendAccessReset($user);
-
-        if ($status !== Password::RESET_LINK_SENT) {
-            return to_route('admin.users.show', $user)
-                ->withErrors(['access' => 'El usuario fue creado, pero no se pudo enviar el enlace de acceso. Puedes reenviarlo desde su detalle.']);
-        }
 
         return to_route('admin.users.show', $user)
-            ->with('status', 'El usuario fue creado y recibió un enlace temporal para establecer su acceso.');
+            ->with('status', 'El usuario fue creado. Comparte sus credenciales iniciales de forma segura y pídele que cambie la contraseña al ingresar.');
     }
 
     public function edit(User $user): View
